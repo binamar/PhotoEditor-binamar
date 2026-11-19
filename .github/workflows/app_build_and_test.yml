@@ -1,12 +1,7 @@
 name: UI test in android emulator CI
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches:
-      - master
-      - kotlin-conversion
+  workflow_dispatch:
 
 jobs:
   build:

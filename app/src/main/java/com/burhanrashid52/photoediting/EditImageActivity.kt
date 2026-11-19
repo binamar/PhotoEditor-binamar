@@ -65,6 +65,7 @@ class EditImageActivity : BaseActivity(), OnPhotoEditorListener, View.OnClickLis
     private lateinit var mStickerBSFragment: StickerBSFragment
     private lateinit var mTxtCurrentTool: TextView
     private lateinit var mWonderFont: Typeface
+    private lateinit var mArabicFont: Typeface
     private lateinit var mRvTools: RecyclerView
     private lateinit var mRvFilters: RecyclerView
     private lateinit var mImgUndo: View
@@ -92,6 +93,7 @@ class EditImageActivity : BaseActivity(), OnPhotoEditorListener, View.OnClickLis
         handleIntentImage(mPhotoEditorView.source)
 
         mWonderFont = Typeface.createFromAsset(assets, "beyond_wonderland.ttf")
+        mArabicFont = Typeface.createFromAsset(assets, "Tajawal-Regular.ttf")
 
         mPropertiesBSFragment = PropertiesBSFragment()
         mEmojiBSFragment = EmojiBSFragment()
@@ -118,7 +120,7 @@ class EditImageActivity : BaseActivity(), OnPhotoEditorListener, View.OnClickLis
 
         mPhotoEditor = PhotoEditor.Builder(this, mPhotoEditorView)
             .setPinchTextScalable(pinchTextScalable) // set flag to make text scalable when pinch
-            //.setDefaultTextTypeface(mTextRobotoTf)
+            .setDefaultTextTypeface(mArabicFont)
             //.setDefaultEmojiTypeface(mEmojiTypeFace)
             .build() // build photo editor sdk
 
@@ -160,6 +162,16 @@ class EditImageActivity : BaseActivity(), OnPhotoEditorListener, View.OnClickLis
 
     private fun initViews() {
         mPhotoEditorView = findViewById(R.id.photoEditorView)
+        val tvWm: TextView = findViewById(R.id.tvWatermarkToggle)
+        fun refreshWm() {
+            tvWm.text = if (isWatermarkEnabled()) "العلامة المائية: تشغيل" else "العلامة المائية: إيقاف"
+        }
+        refreshWm()
+        tvWm.setOnClickListener {
+            getSharedPreferences("settings", MODE_PRIVATE).edit()
+                .putBoolean("watermark", !isWatermarkEnabled()).apply()
+            refreshWm()
+        }
         mTextPlacementOverlay = findViewById(R.id.viewTextPlacementOverlay)
         mTextPlacementOverlay.setOnTouchListener { _, event ->
             if (mIsTextPlacementPending && event.action == MotionEvent.ACTION_UP) {
@@ -302,6 +314,28 @@ class EditImageActivity : BaseActivity(), OnPhotoEditorListener, View.OnClickLis
         )
     }
 
+    private fun isWatermarkEnabled(): Boolean =
+        getSharedPreferences("settings", MODE_PRIVATE).getBoolean("watermark", true)
+
+    private fun addWatermarkView(): TextView {
+        val tv = TextView(this)
+        tv.text = "binamar"
+        tv.setTextColor(android.graphics.Color.WHITE)
+        tv.setShadowLayer(4f, 1f, 1f, android.graphics.Color.BLACK)
+        tv.typeface = mArabicFont
+        tv.textSize = 16f
+        tv.setPadding(8, 8, 8, 8)
+        tv.measure(0, 0)
+        val lp = android.widget.RelativeLayout.LayoutParams(
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        lp.addRule(android.widget.RelativeLayout.CENTER_HORIZONTAL)
+        lp.topMargin = (mPhotoEditorView.source.bottom - tv.measuredHeight - 16).coerceAtLeast(0)
+        mPhotoEditorView.addView(tv, lp)
+        return tv
+    }
+
     @RequiresPermission(allOf = [Manifest.permission.WRITE_EXTERNAL_STORAGE])
     private fun saveImage() {
         val fileName = System.currentTimeMillis().toString() + ".png"
@@ -327,12 +361,11 @@ class EditImageActivity : BaseActivity(), OnPhotoEditorListener, View.OnClickLis
                                 .setTransparencyEnabled(true)
                                 .build()
 
-                            // Watermark with owner name
-                            val wmStyle = TextStyleBuilder()
-                            wmStyle.withTextColor(android.graphics.Color.WHITE)
-                            mPhotoEditor.addText("binamar", wmStyle)
+                            val wm = if (isWatermarkEnabled()) addWatermarkView() else null
+                            if (wm != null) kotlinx.coroutines.delay(150)
 
                             val result = mPhotoEditor.saveAsFile(filePath, saveSettings)
+                            wm?.let { mPhotoEditorView.removeView(it) }
 
                             if (result is SaveFileResult.Success) {
                                 mSaveFileHelper.notifyThatFileIsNowPubliclyAvailable(contentResolver)

@@ -15,6 +15,14 @@ jobs:
         with:
           distribution: zulu
           java-version: 17
+      - name: Prepare signing key
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/binamar.p12"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/binamar.p12" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$KS_PASS" >> "$GITHUB_ENV"
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --stacktrace
       - name: Release APK
