@@ -327,6 +327,11 @@ class EditImageActivity : BaseActivity(), OnPhotoEditorListener, View.OnClickLis
                                 .setTransparencyEnabled(true)
                                 .build()
 
+                            // Watermark with owner name
+                            val wmStyle = TextStyleBuilder()
+                            wmStyle.withTextColor(android.graphics.Color.WHITE)
+                            mPhotoEditor.addText("binamar", wmStyle)
+
                             val result = mPhotoEditor.saveAsFile(filePath, saveSettings)
 
                             if (result is SaveFileResult.Success) {
